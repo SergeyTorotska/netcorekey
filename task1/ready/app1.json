@@ -1,0 +1,267 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "webAppName": {
+            "defaultValue": "myWebApp",
+            "type": "string"
+        },
+        "virtualNetworkName": {
+            "defaultValue": "myVirtualNetwork",
+            "type": "string"
+        },
+        "appGatewaySubnetName": {
+            "defaultValue": "myAppGatewaySubnet",
+            "type": "string"
+        },
+        "appGatewayName": {
+            "defaultValue": "myAppGateway",
+            "type": "string"
+        },
+        "location": {
+            "defaultValue": "[resourceGroup().location]",
+            "type": "string"
+        },
+      "capacity": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Number of instances"
+      }
+    }
+    },
+    "variables": {
+        "location": "[parameters('location')]",
+        "virtualNetworkName": "[concat(parameters('virtualNetworkName'), '-', uniqueString(resourceGroup().id))]",
+        "virtualNetworkAddressPrefix": "10.0.0.0/20",
+        "virtualNetworkSubnetName": "[parameters('appGatewaySubnetName')]",
+        "virtualNetworkSubnetPrefix": "10.0.0.0/24",
+        "virtualNetworkId": "[resourceId('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "virtualNetworkSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets/', variables('virtualNetworkName'), variables('virtualNetworkSubnetName'))]",
+        "publicIpAddressName": "[concat('myAppGatewayPublicIp', '-', uniqueString(resourceGroup().id))]",
+        "publicIpAddressSku": "Standard",
+        "publicIpAddressAllocationType": "Static",
+        "publicIpAddressId": "[resourceId('Microsoft.Network/publicIPAddresses/', variables('publicIpAddressName'))]",
+        "webAppName": "[concat(parameters('webAppName'), '-', uniqueString(resourceGroup().id))]",
+        "webAppPlanName": "[concat(parameters('webAppName'), 'Plan', '-', uniqueString(resourceGroup().id))]",
+        "webAppPlanSku": "B1",
+        "webAppPlanId": "[resourceId('Microsoft.Web/serverfarms', variables('webAppPlanName'))]",
+        "applicationGatewayName": "[concat(parameters('appGatewayName'), '-', uniqueString(resourceGroup().id))]",
+        "applicationGatewaySkuSize": "Standard_v2",
+        "applicationGatewayTier": "Standard_v2",
+        "appGwIpConfigName": "appGatewayIpConfigName",
+        "appGwFrontendPortName": "appGatewayFrontendPort",
+        "appGwFrontendPort": 443,
+        "appGwFrontendPortId": "[resourceId('Microsoft.Network/applicationGateways/frontendPorts/', variables('applicationGatewayName'), variables('appGwFrontendPortName'))]",
+        "appGwFrontendIpConfigName": "appGatewayPublicFrontendIpConfig",
+        "appGwFrontendIpConfigId": "[resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations/', variables('applicationGatewayName'), variables('appGwFrontendIpConfigName'))]",
+        "appGwHttpSettingName": "appGatewayHttpSetting",
+        "appGwHttpSettingId": "[resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection/', variables('applicationGatewayName'), variables('appGwHttpSettingName'))]",
+        "appGwHttpSettingProbeName": "appGatewayHttpSettingProbe",
+        "appGwBackendAddressPoolName": "[concat('appGateway', variables('webAppName'), 'BackendPool')]",
+        "appGwBackendAddressPoolId": "[resourceId('Microsoft.Network/applicationGateways/backendAddressPools/', variables('applicationGatewayName'), variables('appGwBackendAddressPoolName'))]",
+        "appGwListenerName": "appGatewayListener",
+        "appGwListenerId": "[resourceId('Microsoft.Network/applicationGateways/httpListeners/', variables('applicationGatewayName'), variables('appGwListenerName'))]",
+        "appGwRoutingRuleName": "appGatewayRoutingRule"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('virtualNetworkName')]",
+            "location": "[variables('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('virtualNetworkAddressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('virtualNetworkSubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[variables('virtualNetworkSubnetPrefix')]",
+                            "serviceEndpoints": [
+                                {
+                                    "service": "Microsoft.Web",
+                                    "locations": [
+                                        "*"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "name": "[variables('webAppPlanName')]",
+            "apiVersion": "2021-01-01",
+            "location": "[variables('location')]",
+            "properties": {
+                "reserved": "false"
+            },
+            "sku": {
+                "name": "[variables('webAppPlanSku')]",
+                "capacity": 1
+            }
+        },
+        {
+            "name": "[variables('webAppName')]",
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2021-01-01",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[variables('webAppPlanId')]",
+                "[variables('virtualNetworkId')]"
+            ],
+            "properties": {
+                "serverFarmId": "[variables('webAppPlanId')]",
+                "reserved": "false",
+                "siteConfig": {
+                    "http20Enabled": "true",
+                    "minTlsVersion": "1.2",
+                    "ipSecurityRestrictions": [
+                        {
+                         
+                        }
+                    ]
+                },
+                "httpsOnly": "true"
+            }
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('publicIpAddressName')]",
+            "location": "[variables('location')]",
+            "sku": {
+                "name": "[variables('publicIpAddressSku')]"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "[variables('publicIpAddressAllocationType')]",
+                "dnsSettings": {
+                    "domainNameLabel": "[toLower(variables('webAppName'))]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/applicationGateways",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('applicationGatewayName')]",
+            "location": "[variables('location')]",
+            "dependsOn": [
+                "[variables('publicIpAddressId')]",
+                "[variables('virtualNetworkId')]"
+            ],
+            "properties": {
+                "sku": {
+                    "name": "[variables('applicationGatewaySkuSize')]",
+                    "tier": "[variables('applicationGatewayTier')]",
+                    "capacity": "[parameters('capacity')]"
+                },
+                "gatewayIPConfigurations": [
+                    {
+                        "name": "[variables('appGwIpConfigName')]",
+                        "properties": {
+                            "subnet": {
+                                "id": "[variables('virtualNetworkSubnetId')]"
+                            }
+                        }
+                    }
+                ],
+                "frontendIPConfigurations": [
+                    {
+                        "name": "[variables('appGwFrontendIpConfigName')]",
+                        "properties": {
+                            "PublicIPAddress": {
+                                "id": "[variables('publicIpAddressId')]"
+                            }
+                        }
+                    }
+                ],
+                "frontendPorts": [
+                    {
+                        "name": "[variables('appGwFrontendPortName')]",
+                        "properties": {
+                            "Port": "[variables('appGwFrontendPort')]"
+                        }
+                    }
+                ],
+                "backendAddressPools": [
+                    {
+                        "name": "[variables('appGwBackendAddressPoolName')]",
+                        "properties": {
+                            "backendAddresses": [
+                                {
+                                   "ipAddress": "54.34.53.663"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "backendHttpSettingsCollection": [
+                    {
+                        "name": "[variables('appGwHttpSettingName')]",
+                        "properties": {
+                            "Port": 443,
+                            "Protocol": "Https",
+                            "cookieBasedAffinity": "Disabled",
+                            "requestTimeout": 10
+                           
+                        }
+                    }
+                ],
+                "httpListeners": [
+                    {
+                        "name": "[variables('appGwListenerName')]",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[variables('appGwFrontendIpConfigId')]"
+                            },
+                            "frontendPort": {
+                                "id": "[variables('appGwFrontendPortId')]"
+                            },
+                            "protocol": "Https",
+                            "SslCertificate": {
+                            "Id": "[resourceId('Microsoft.Network/applicationGateways/sslCertificates',variables('applicationGatewayName'), 'appGatewaySslCert')]"
+              }
+                        }
+                    }
+                ],
+                "requestRoutingRules": [
+                    {
+                        "Name": "[variables('appGwRoutingRuleName')]",
+                        "properties": {
+                            "RuleType": "Basic",
+                            "httpListener": {
+                                "id": "[variables('appGwListenerId')]"
+                            },
+                            "backendAddressPool": {
+                                "id": "[variables('appGwBackendAddressPoolId')]"
+                            },
+                            "backendHttpSettings": {
+                                "id": "[variables('appGwHttpSettingId')]"
+                            }
+                        }
+                    }
+                ],
+                "enableHttp2": false,
+                "sslCertificates": [
+{
+           "name": "appGatewaySslCert",
+            "properties": {
+              "data": "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",
+              "password": "123Sppp"
+            }
+          }
+
+                
+                ]              
+            }
+        }
+    ],
+    "outputs": {}
+    
+}
