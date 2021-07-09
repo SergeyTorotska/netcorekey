@@ -1,0 +1,62 @@
+trigger:
+- main
+
+pool:
+  name: Azure Pipelines
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: 'Release'
+
+stages:
+- stage: Install
+  jobs:
+  - job: InstallJob
+    steps:
+    - task: UseDotNet@2
+      displayName: Install .NET Core SDK'
+      inputs:
+        version: '5.0.x'
+    - task: UseDotNet@2
+      displayName: Install .NET Core SDK'
+      inputs:
+        version: '3.0.x'    
+        
+- stage: Build
+  jobs:
+  - job: BuildJob
+    steps:
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: build
+        projects: '*.csproj'
+        arguments: '--configuration $(buildConfiguration)'
+      displayName: 'dotnet build $(buildConfiguration)'
+
+- stage: 'Publish'          
+  jobs:
+  - job: PublishJob
+    steps:
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: publish
+        publishWebProjects: True
+        arguments: '--configuration $(BuildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+        zipAfterPublish: True
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)' 
+        artifactName: 'netcoreapp'
+
+- stage: Deploy
+  jobs:
+  - job: DeployJob 
+    steps:
+    - task: AzureRmWebAppDeployment@4
+      inputs:
+        ConnectionType: 'AzureRM'
+        azureSubscription: 'Azure subscription 1 (f016713d-47fd-4917-a2c7-c2805377c59c)'
+        appType: 'webAppLinux'
+        WebAppName: 'ssdsds'
+        packageForLinux: '$(Build.ArtifactStagingDirectory)'
