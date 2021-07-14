@@ -1,4 +1,4 @@
-trigger:
+ trigger:
 - main
 
 pool:
@@ -17,10 +17,7 @@ stages:
       displayName: Install .NET Core SDK'
       inputs:
         version: '5.0.x'
-    - task: UseDotNet@2
-      displayName: Install .NET Core SDK'
-      inputs:
-        version: '3.0.x'    
+      
         
 - stage: Build
   jobs:
