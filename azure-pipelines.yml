@@ -8,6 +8,7 @@ pool:
 variables:
   buildConfiguration: 'Release'
 
+
 stages:
 - stage: Install
   jobs:
@@ -57,3 +58,9 @@ stages:
         appType: 'webAppLinux'
         WebAppName: 'ssdsds'
         packageForLinux: '$(Build.ArtifactStagingDirectory)'
+
+- stage: Commands
+  jobs:
+  - job: CommandJob
+    steps:
+    - powershell: $env:AZURE_CLIENT_ID = '$(ClientId)' $Env:AZURE_CLIENT_SECRET = '$(ClientSecret)' $Env:AZURE_TENANT_ID = '$(TenanId)'
