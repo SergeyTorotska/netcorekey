@@ -7,7 +7,10 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
-
+  ClientId: 'Release'
+  ClientSecret: 'Release'
+  TenantId: 'Release'
+  
 
 stages:
 - stage: Install
@@ -63,4 +66,4 @@ stages:
   jobs:
   - job: CommandJob
     steps:
-    - powershell: $env:AZURE_CLIENT_ID = '$(ClientId)' $Env:AZURE_CLIENT_SECRET = '$(ClientSecret)' $Env:AZURE_TENANT_ID = '$(TenanId)'
+    - powershell: $env:AZURE_CLIENT_ID = '$(ClientId)' $Env:AZURE_CLIENT_SECRET = '$(ClientSecret)' $Env:AZURE_TENANT_ID = '$(TenantId)'
