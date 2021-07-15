@@ -66,4 +66,6 @@ stages:
   jobs:
   - job: CommandJob
     steps:
-    - powershell: $env:AZURE_CLIENT_ID = '$(ClientId)' $Env:AZURE_CLIENT_SECRET = '$(ClientSecret)' $Env:AZURE_TENANT_ID = '$(TenantId)'
+    - powershell: $env:AZURE_CLIENT_ID = '$(ClientId)'
+                  $Env:AZURE_CLIENT_SECRET = '$(ClientSecret)' 
+                  $Env:AZURE_TENANT_ID = '$(TenantId)'
